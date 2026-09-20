@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: ISC
+# The unix programs POSIX never named. Needs luaposixcli installed: these
+# use its modules (luaposixcli.util, .term, .zlib) and its ps.list.
+project('lunatix', meson_version: '>=1.1')
+
+lua_name = get_option('lua')
+lua_ver = lua_name.replace('lua', '')
+lua_mod_dir = get_option('datadir') / 'lua' / lua_ver
+
+stylua = find_program('stylua', required: false)
+if stylua.found()
+  run_target('format',
+    command: [stylua, meson.project_source_root()],
+  )
+endif
+
+lua_prog = find_program(lua_name)
+sh = find_program('sh')
+
+install_data(
+  'lunatix/http.lua', 'lunatix/tcp.lua', 'lunatix/zmodem.lua',
+  install_dir: lua_mod_dir / 'lunatix',
+)
+
+foreach p : ['ping', 'top', 'sz', 'rz', 'fetch', 'gzip']
+  subdir(p)
+endforeach
