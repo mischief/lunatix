@@ -65,11 +65,22 @@ local function now_ms()
 	return ts.tv_sec * 1000.0 + ts.tv_nsec / 1000000.0
 end
 
--- Open ICMP socket (unprivileged on Linux)
-local fd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_ICMP)
+-- The unprivileged ICMP socket first: it needs no capability, but only
+-- for a gid inside net.ipv4.ping_group_range, which by default holds
+-- nobody at all. A raw socket is the fallback, and wants CAP_NET_RAW.
+local fd, derr = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_ICMP)
+local raw = false
 if not fd then
-	io.stderr:write("ping: cannot create ICMP socket\n")
-	os.exit(2)
+	local rerr
+	fd, rerr = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_ICMP)
+	raw = fd ~= nil
+	if not fd then
+		io.stderr:write("ping: cannot create an ICMP socket: " ..
+			tostring(derr) .. " (datagram), " .. tostring(rerr) .. " (raw)\n")
+		io.stderr:write("ping: a datagram socket needs a gid in " ..
+			"net.ipv4.ping_group_range, a raw one needs CAP_NET_RAW\n")
+		os.exit(2)
+	end
 end
 
 local dest = {family = socket.AF_INET, addr = dest_addr, port = 0}
@@ -91,22 +102,38 @@ while running do
 	socket.sendto(fd, pkt, dest)
 	sent = sent + 1
 
-	-- Wait for reply
+	-- Wait for the reply to this request. A raw socket also hands back
+	-- our own echo request and anyone else's traffic, so read until the
+	-- reply turns up or the time is gone.
 	local fds = {[fd] = {events = {IN = true}}}
-	local ready = poll.poll(fds, 2000)
-	if ready and ready > 0 then
+	local deadline = t0 + 2000
+	while true do
+		local left = deadline - now_ms()
+		if left <= 0 then break end
+		local ready = poll.poll(fds, math.floor(left))
+		if not ready or ready == 0 then break end
 		local data = socket.recv(fd, 1500)
-		if data then
-			local ms = now_ms() - t0
-			local typ = string.byte(data, 1)
-			if typ == 0 then  -- echo reply
-				received = received + 1
-				if ms < min_ms then min_ms = ms end
-				if ms > max_ms then max_ms = ms end
-				sum_ms = sum_ms + ms
-				io.write(string.format("%d bytes from %s: icmp_seq=%d time=%.1f ms\n",
-					#data, dest_addr, seq, ms))
-			end
+		if not data then break end
+		local ms = now_ms() - t0
+		-- a raw socket hands back the IP header as well
+		local reply = data
+		if raw then
+			local ihl = ((string.byte(data, 1) or 0) & 0x0f) * 4
+			reply = (ihl >= 20 and #data > ihl) and data:sub(ihl + 1) or ""
+		end
+		local typ = string.byte(reply, 1)
+		-- id and sequence are the two bytes at 5 and 7. The kernel
+		-- rewrites the id on a datagram socket, so only match it raw.
+		local rid = (string.byte(reply, 5) or 0) * 256 + (string.byte(reply, 6) or 0)
+		local rseq = (string.byte(reply, 7) or 0) * 256 + (string.byte(reply, 8) or 0)
+		if typ == 0 and rseq == seq and (not raw or rid == id) then
+			received = received + 1
+			if ms < min_ms then min_ms = ms end
+			if ms > max_ms then max_ms = ms end
+			sum_ms = sum_ms + ms
+			io.write(string.format("%d bytes from %s: icmp_seq=%d time=%.1f ms\n",
+				#reply, dest_addr, seq, ms))
+			break
 		end
 	end
 

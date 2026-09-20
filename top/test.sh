@@ -7,9 +7,11 @@ TOP="lua5.4 $D/top.lua"
 # top reads the process table through luaposixcli's ps.sys
 lua5.4 -e 'require("ps.sys")' 2>/dev/null || exit 77
 
-# Not a terminal: say so rather than painting escape sequences into a pipe
-$TOP -n 1 > /dev/null 2>&1 && exit 1
-$TOP -n 1 2>&1 | grep -q "not a terminal" || exit 1
+# No terminal anywhere - setsid drops the controlling one, so /dev/tty
+# cannot be opened either. Say so rather than painting into a pipe.
+command -v setsid >/dev/null 2>&1 || exit 77
+setsid $TOP -n 1 > /dev/null 2>&1 && exit 1
+setsid $TOP -n 1 2>&1 < /dev/null | grep -q "not a terminal" || exit 1
 # Bad arguments are rejected
 $TOP -d -1 2>/dev/null && exit 1
 $TOP -z 2>/dev/null && exit 1

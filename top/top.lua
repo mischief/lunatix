@@ -5,6 +5,7 @@ local prefix = ((arg[0] or "top"):match("(.+/)") or "./") .. "../"
 package.path = prefix .. "?.lua;" .. prefix .. "share/lua/5.4/?.lua;" .. package.path
 
 local unistd = require("posix.unistd")
+local fcntl = require("posix.fcntl")
 local poll = require("posix.poll")
 local list = require("ps.list")
 local terminfo = require("luaposixcli.term")
@@ -35,6 +36,17 @@ while i <= #arg do
 end
 
 local term = terminfo.new()
+
+-- A supervisor may hand stdout to a logger; the terminal is still
+-- reachable as /dev/tty, which is what a full-screen program wants.
+if unistd.isatty(0) ~= 1 or unistd.isatty(1) ~= 1 then
+	local fd = fcntl.open("/dev/tty", fcntl.O_RDWR)
+	if fd then
+		if unistd.isatty(0) ~= 1 then unistd.dup2(fd, 0) end
+		if unistd.isatty(1) ~= 1 then unistd.dup2(fd, 1) end
+		if fd > 2 then unistd.close(fd) end
+	end
+end
 if unistd.isatty(1) ~= 1 then die("not a terminal") end
 
 -- raw first: the size query is answered on the input side, and a cooked
