@@ -18,9 +18,18 @@ mkdir "$TMP/www"
 printf 'hello over http\n' > "$TMP/www/hello.txt"
 dd if=/dev/urandom of="$TMP/www/blob.bin" bs=1000 count=50 2>/dev/null
 
-PORT=$((8000 + $$ % 1000))
-(cd "$TMP/www" && python3 -m http.server "$PORT" --bind 127.0.0.1 >/dev/null 2>&1) &
+# port 0 lets the kernel pick, which is what keeps two runs of this test
+# from landing on the same one; the server says which it got
+(cd "$TMP/www" && python3 -u -m http.server 0 --bind 127.0.0.1 > "$TMP/log" 2>&1) &
 SERVER=$!
+PORT=
+n=0
+while [ -z "$PORT" ]; do
+	PORT=$(sed -n 's/.*port \([0-9]*\).*/\1/p' "$TMP/log" 2>/dev/null | head -1)
+	n=$((n + 1))
+	[ "$n" -gt 50 ] && exit 1
+	[ -z "$PORT" ] && sleep 0.1
+done
 n=0
 while ! $FETCH "http://127.0.0.1:$PORT/hello.txt" >/dev/null 2>&1; do
 	n=$((n + 1))
