@@ -34,6 +34,6 @@ foreach p : ['ping', 'top', 'sz', 'rz', 'fetch', 'gzip', 'mount', 'umount', 'reb
     'login', 'su', 'getty',
     'modules', 'hostname', 'chroot',
     'install', 'less',
-    'switch_root', 'mountpoint', 'losetup']
+    'switch_root', 'mountpoint', 'losetup', 'swap']
   subdir(p)
 endforeach
