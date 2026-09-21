@@ -18,5 +18,18 @@ $MOUNT -t tmpfs none /proc/nonexistent 2>&1 | grep -q "mount:" || exit 1
 command -v unshare >/dev/null 2>&1 || exit 0
 TMP=$(mktemp -d)
 unshare -r -m sh -c "lua5.4 $D/mount.lua -t tmpfs none $TMP && echo x > $TMP/f && lua5.4 $D/../umount/umount.lua $TMP && [ ! -f $TMP/f ]" || { rm -rf "$TMP"; exit 1; }
+
+# -a mounts what an fstab says to mount, skips noauto, and umount -a
+# takes it away again
+mkdir -p "$TMP/mp" "$TMP/never"
+printf 'tmpfs %s/mp tmpfs defaults 0 0\nnone %s/never tmpfs noauto 0 0\n' "$TMP" "$TMP" > "$TMP/fstab"
+unshare -r -m sh -c "lua5.4 $D/mount.lua -a -T $TMP/fstab &&
+	echo x > $TMP/mp/f &&
+	grep -q ' $TMP/mp ' /proc/self/mounts &&
+	! grep -q ' $TMP/never ' /proc/self/mounts &&
+	lua5.4 $D/../umount/umount.lua -a 2>/dev/null
+	! grep -q ' $TMP/mp ' /proc/self/mounts" || { rm -rf "$TMP"; exit 1; }
+# an fstab that is not there is reported, not passed over
+$MOUNT -a -T "$TMP/nosuchfstab" 2>&1 | grep -q "cannot read" || { rm -rf "$TMP"; exit 1; }
 rm -rf "$TMP"
 exit 0
