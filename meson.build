@@ -32,6 +32,7 @@ install_data(
 foreach p : ['ping', 'top', 'sz', 'rz', 'fetch', 'gzip', 'mount', 'umount', 'reboot', 'dmesg',
     'sum', 'sync', 'killall',
     'login', 'su', 'getty',
-    'modules', 'hostname', 'chroot']
+    'modules', 'hostname', 'chroot',
+    'install', 'less']
   subdir(p)
 endforeach
