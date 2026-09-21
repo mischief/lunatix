@@ -21,36 +21,23 @@ local function usage()
 	util.die("usage: hexdump [-C] [-n len] [-s skip] [file...]", 2)
 end
 
-local i = 1
-while i <= #arg do
-	local a = arg[i]
-	if a == "--" then
-		for j = i + 1, #arg do files[#files + 1] = arg[j] end
-		break
-	elseif a:sub(1, 2) == "-c" or a:sub(1, 2) == "-l" or a:sub(1, 2) == "-s"
-		or a:sub(1, 2) == "-n" then
-		local which = a:sub(2, 2)
-		local value = a:sub(3)
-		if value == "" then
-			i = i + 1
-			value = arg[i] or usage()
-		end
-		local n = tonumber(value) or tonumber(value, 16) or usage()
-		if which == "c" then columns = n
-		elseif which == "s" then skip = n
-		else length = n end
-	elseif a:sub(1, 1) == "-" and #a > 1 then
-		for c in a:sub(2):gmatch(".") do
-			if c == "r" then reverse = true
-			elseif c == "p" then plain = true
-			elseif c == "C" then canonical = true
-			else usage() end
-		end
-	else
-		files[#files + 1] = a
-	end
-	i = i + 1
+-- a count may be written in hex, the way an offset in a file usually is
+local function count(text)
+	return tonumber(text) or tonumber(text, 16) or usage()
 end
+
+local optind = 1
+for opt, optarg, oi in unistd.getopt(arg, "rpCc:l:s:n:") do
+	if opt == "r" then reverse = true
+	elseif opt == "p" then plain = true
+	elseif opt == "C" then canonical = true
+	elseif opt == "c" then columns = count(optarg)
+	elseif opt == "s" then skip = count(optarg)
+	elseif opt == "l" or opt == "n" then length = count(optarg)
+	else usage() end
+	optind = oi
+end
+files = util.operands(arg, optind)
 
 local data, err = util.slurp(files[1])
 if not data then util.die(err or (tostring(files[1]) .. ": cannot read")) end

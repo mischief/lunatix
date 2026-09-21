@@ -20,21 +20,15 @@ local function usage()
 	util.die("usage: losetup [-d device] [-f] [-a] [device file]", 2)
 end
 
-local i = 1
-while i <= #arg do
-	local a = arg[i]
-	if a:sub(1, 1) == "-" and #a > 1 then
-		for c in a:sub(2):gmatch(".") do
-			if c == "d" then detach = true
-			elseif c == "f" then find_free = true
-			elseif c == "a" then show = true
-			else usage() end
-		end
-	else
-		operands[#operands + 1] = a
-	end
-	i = i + 1
+local optind = 1
+for opt, _, oi in unistd.getopt(arg, "dfa") do
+	if opt == "d" then detach = true
+	elseif opt == "f" then find_free = true
+	elseif opt == "a" then show = true
+	else usage() end
+	optind = oi
 end
+operands = util.operands(arg, optind)
 
 -- what /sys says is in use, which is where the kernel keeps it
 local function backing(device)

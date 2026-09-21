@@ -19,12 +19,14 @@ if not name then
 end
 local hash = require("lunatix.crypto." .. name)
 
-local check, files = false, {}
-for _, a in ipairs(arg) do
-	if a == "-c" then check = true
-	elseif a == "-" or a:sub(1, 1) ~= "-" then files[#files + 1] = a
+local check = false
+local optind = 1
+for opt, _, oi in unistd.getopt(arg, "c") do
+	if opt == "c" then check = true
 	else util.die("usage: " .. util.prog .. " [-c] [file...]") end
+	optind = oi
 end
+local files = util.operands(arg, optind)
 
 local function digest(data)
 	return (hash.hash(data):gsub(".", function(c)

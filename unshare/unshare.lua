@@ -20,26 +20,20 @@ local names = {
 	C = "CLONE_NEWCGROUP",
 }
 
-local i = 1
-while i <= #arg do
-	local a = arg[i]
-	if a:sub(1, 1) == "-" and #a > 1 then
-		for c in a:sub(2):gmatch(".") do
-			if names[c] then
-				flags = flags | (sys[names[c]] or 0)
-			elseif c == "f" then fork_first = true
-			elseif c == "r" then
-				map_root = true
-				flags = flags | (sys.CLONE_NEWUSER or 0)
-			else
-				util.die("usage: unshare [-muinpUCfr] utility [argument...]", 2)
-			end
-		end
+local optind = 1
+for opt, _, oi in unistd.getopt(arg, "muinpUCfr") do
+	if names[opt] then
+		flags = flags | (sys[names[opt]] or 0)
+	elseif opt == "f" then fork_first = true
+	elseif opt == "r" then
+		map_root = true
+		flags = flags | (sys.CLONE_NEWUSER or 0)
 	else
-		break
+		util.die("usage: unshare [-muinpUCfr] utility [argument...]", 2)
 	end
-	i = i + 1
+	optind = oi
 end
+local operands = util.operands(arg, optind)
 
 if flags == 0 then flags = sys.CLONE_NEWNS or 0 end
 
@@ -59,9 +53,9 @@ if map_root then
 	if gmap then gmap:write("0 " .. gid .. " 1"); gmap:close() end
 end
 
-local utility = arg[i] or os.getenv("SHELL") or "/bin/sh"
+local utility = operands[1] or os.getenv("SHELL") or "/bin/sh"
 local rest = {}
-for j = i + 1, #arg do rest[#rest + 1] = arg[j] end
+for j = 2, #operands do rest[#rest + 1] = operands[j] end
 
 -- a new pid namespace only takes effect for a child, so -f, and a pid
 -- namespace without it would leave the command as pid 1 of nothing

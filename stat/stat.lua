@@ -19,30 +19,16 @@ local function usage()
 	util.die("usage: stat [-Lft] [-c format] file...", 2)
 end
 
-local i = 1
-while i <= #arg do
-	local a = arg[i]
-	if a == "--" then
-		for j = i + 1, #arg do files[#files + 1] = arg[j] end
-		break
-	elseif a:sub(1, 2) == "-c" then
-		format = a:sub(3)
-		if format == "" then
-			i = i + 1
-			format = arg[i] or usage()
-		end
-	elseif a:sub(1, 1) == "-" and #a > 1 then
-		for c in a:sub(2):gmatch(".") do
-			if c == "L" then follow = true
-			elseif c == "t" then terse = true
-			elseif c == "f" then filesystem = true
-			else usage() end
-		end
-	else
-		files[#files + 1] = a
-	end
-	i = i + 1
+local optind = 1
+for opt, optarg, oi in unistd.getopt(arg, "Ltfc:") do
+	if opt == "L" then follow = true
+	elseif opt == "t" then terse = true
+	elseif opt == "f" then filesystem = true
+	elseif opt == "c" then format = optarg
+	else usage() end
+	optind = oi
 end
+files = util.operands(arg, optind)
 
 if #files == 0 then usage() end
 

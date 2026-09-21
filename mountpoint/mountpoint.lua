@@ -11,20 +11,14 @@ local util = require("luaposixcli.util")
 local quiet, want_device = false, false
 local path = nil
 
-local i = 1
-while i <= #arg do
-	local a = arg[i]
-	if a:sub(1, 1) == "-" and #a > 1 then
-		for c in a:sub(2):gmatch(".") do
-			if c == "q" then quiet = true
-			elseif c == "d" then want_device = true
-			else util.die("usage: mountpoint [-dq] directory", 2) end
-		end
-	else
-		path = a
-	end
-	i = i + 1
+local optind = 1
+for opt, _, oi in unistd.getopt(arg, "qd") do
+	if opt == "q" then quiet = true
+	elseif opt == "d" then want_device = true
+	else util.die("usage: mountpoint [-dq] directory", 2) end
+	optind = oi
 end
+path = util.operands(arg, optind)[1]
 
 if not path then util.die("usage: mountpoint [-dq] directory", 2) end
 

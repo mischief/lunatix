@@ -9,9 +9,9 @@ local fcntl = require("posix.fcntl")
 local util = require("luaposixcli.util")
 
 local timestamps, follow = true, false
-for _, a in ipairs(arg) do
-	if a == "-t" then timestamps = false
-	elseif a == "-w" or a == "--follow" then follow = true
+for opt in unistd.getopt(arg, "tw") do
+	if opt == "t" then timestamps = false
+	elseif opt == "w" then follow = true
 	else util.die("usage: dmesg [-t] [-w]") end
 end
 

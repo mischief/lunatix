@@ -8,12 +8,12 @@ local unistd = require("posix.unistd")
 local util = require("luaposixcli.util")
 
 local unit, name = 1, "k"
-for _, a in ipairs(arg) do
-	if a == "-b" then unit, name = 1024, "b"
-	elseif a == "-k" then unit, name = 1, "k"
-	elseif a == "-m" then unit, name = 1 / 1024, "m"
-	elseif a == "-g" then unit, name = 1 / 1048576, "g"
-	elseif a == "-h" then unit, name = nil, "h"
+for opt in unistd.getopt(arg, "bkmgh") do
+	if opt == "b" then unit, name = 1024, "b"
+	elseif opt == "k" then unit, name = 1, "k"
+	elseif opt == "m" then unit, name = 1 / 1024, "m"
+	elseif opt == "g" then unit, name = 1 / 1048576, "g"
+	elseif opt == "h" then unit, name = nil, "h"
 	else util.die("usage: free [-bkmgh]", 2) end
 end
 

@@ -15,20 +15,24 @@ local login_shell = false
 local command = nil
 local user = "root"
 
-local i = 1
-local seen_user = false
-while i <= #arg do
-	local a = arg[i]
-	if a == "-" or a == "-l" or a == "--login" then login_shell = true
-	elseif a == "-c" then i = i + 1; command = arg[i]
-	elseif a:sub(1, 1) ~= "-" and not seen_user then
-		user = a
-		seen_user = true
-	else
-		util.die("usage: su [-] [-c command] [user]")
-	end
-	i = i + 1
+-- a lone "-" means a login shell. getopt reads it as an operand, so it
+-- comes off the front before getopt sees anything.
+while arg[1] == "-" do
+	login_shell = true
+	table.remove(arg, 1)
 end
+
+local optind = 1
+for opt, optarg, oi in unistd.getopt(arg, "lc:") do
+	if opt == "l" then login_shell = true
+	elseif opt == "c" then command = optarg
+	else util.die("usage: su [-] [-c command] [user]") end
+	optind = oi
+end
+
+local operands = util.operands(arg, optind)
+if #operands > 1 then util.die("usage: su [-] [-c command] [user]") end
+user = operands[1] or user
 
 local entry, err = auth.account(user)
 if not entry then util.die(user .. ": " .. err) end

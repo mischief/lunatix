@@ -15,24 +15,17 @@ local die = util.die
 
 local delay, frames = 2, 0
 
-local i = 1
-while i <= #arg do
-	local a = arg[i]
-	local function value()
-		local v = a:sub(3)
-		if v == "" then
-			i = i + 1
-			v = arg[i]
-		end
-		local n = v and tonumber(v)
-		if not n or n < 0 then die("usage: top [-d seconds] [-n frames]") end
-		return n
-	end
-	if a:sub(1, 2) == "-d" then delay = value()
-	elseif a:sub(1, 2) == "-n" then frames = math.floor(value())
+local function seconds(text)
+	local n = text and tonumber(text)
+	if not n or n < 0 then die("usage: top [-d seconds] [-n frames]") end
+	return n
+end
+
+for opt, optarg in unistd.getopt(arg, "d:n:") do
+	if opt == "d" then delay = seconds(optarg)
+	elseif opt == "n" then frames = math.floor(seconds(optarg))
 	else die("usage: top [-d seconds] [-n frames]")
 	end
-	i = i + 1
 end
 
 local term = terminfo.new()

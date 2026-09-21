@@ -17,35 +17,19 @@ local function usage()
 	util.die("usage: install [-d] [-m mode] [-o owner] [-g group] source... target")
 end
 
-local i = 1
-while i <= #arg do
-	local a = arg[i]
-	if a == "--" then
-		for j = i + 1, #arg do operands[#operands + 1] = arg[j] end
-		break
-	elseif a == "-d" then
-		make_dirs = true
-	elseif a == "-D" or a == "-p" or a == "-c" or a == "-v" or a == "-s" then
+local optind = 1
+for opt, optarg, oi in unistd.getopt(arg, "dDpcvsm:o:g:") do
+	if opt == "d" then make_dirs = true
+	elseif opt == "D" or opt == "p" or opt == "c" or opt == "v" or opt == "s" then
 		-- -D makes the leading directories, which is done anyway; the
 		-- rest are about preserving, verbosity and stripping
-	elseif a:sub(1, 2) == "-m" or a:sub(1, 2) == "-o" or a:sub(1, 2) == "-g" then
-		local which = a:sub(2, 2)
-		local value = a:sub(3)
-		if value == "" then
-			i = i + 1
-			value = arg[i]
-		end
-		if not value then usage() end
-		if which == "m" then mode = value
-		elseif which == "o" then owner = value
-		else group = value end
-	elseif a:sub(1, 1) == "-" and #a > 1 then
-		usage()
-	else
-		operands[#operands + 1] = a
-	end
-	i = i + 1
+	elseif opt == "m" then mode = optarg
+	elseif opt == "o" then owner = optarg
+	elseif opt == "g" then group = optarg
+	else usage() end
+	optind = oi
 end
+operands = util.operands(arg, optind)
 
 if #operands == 0 then usage() end
 

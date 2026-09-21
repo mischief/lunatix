@@ -9,24 +9,20 @@ local wait = require("posix.sys.wait")
 local util = require("luaposixcli.util")
 
 local wait_for_it = false
-local i = 1
-while i <= #arg do
-	local a = arg[i]
-	if a == "-w" or a == "--wait" then wait_for_it = true
-	elseif a == "-c" or a == "-f" then -- controlling terminal, fork anyway
-	elseif a:sub(1, 1) == "-" and #a > 1 then
-		util.die("usage: setsid [-w] utility [argument...]", 2)
-	else
-		break
-	end
-	i = i + 1
+local optind = 1
+for opt, _, oi in unistd.getopt(arg, "wcf") do
+	if opt == "w" then wait_for_it = true
+	elseif opt == "c" or opt == "f" then -- controlling terminal, fork anyway
+	else util.die("usage: setsid [-w] utility [argument...]", 2) end
+	optind = oi
 end
+local operands = util.operands(arg, optind)
 
-local utility = arg[i]
+local utility = operands[1]
 if not utility then util.die("usage: setsid [-w] utility [argument...]", 2) end
 
 local rest = {}
-for j = i + 1, #arg do rest[#rest + 1] = arg[j] end
+for j = 2, #operands do rest[#rest + 1] = operands[j] end
 
 -- setsid(2) refuses when the caller already leads its session, so the
 -- work happens in a child, which never does

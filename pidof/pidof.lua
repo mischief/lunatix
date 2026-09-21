@@ -12,23 +12,17 @@ local list = require("ps.list")
 local util = require("luaposixcli.util")
 
 local single, omit = false, {}
-local names = {}
 
-local i = 1
-while i <= #arg do
-	local a = arg[i]
-	if a == "-s" then single = true
-	elseif a == "-o" then
-		i = i + 1
-		for pid in (arg[i] or ""):gmatch("%d+") do omit[tonumber(pid)] = true end
-	elseif a == "-x" then -- scripts as well as programs, which is what we do anyway
-	elseif a:sub(1, 1) == "-" and #a > 1 then
-		util.die("usage: pidof [-s] [-o pid] name...", 2)
-	else
-		names[#names + 1] = a
-	end
-	i = i + 1
+local optind = 1
+for opt, optarg, oi in unistd.getopt(arg, "sxo:") do
+	if opt == "s" then single = true
+	elseif opt == "o" then
+		for pid in (optarg or ""):gmatch("%d+") do omit[tonumber(pid)] = true end
+	elseif opt == "x" then -- scripts as well as programs, which is what we do anyway
+	else util.die("usage: pidof [-s] [-o pid] name...", 2) end
+	optind = oi
 end
+local names = util.operands(arg, optind)
 
 if #names == 0 then util.die("usage: pidof [-s] [-o pid] name...", 2) end
 

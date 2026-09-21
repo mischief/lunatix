@@ -21,32 +21,23 @@ local function warn(msg)
 	if status < 1 then status = 1 end
 end
 
-local i = 1
-while i <= #arg do
-	local a = arg[i]
-	if a == "--" then
-		for j = i + 1, #arg do files[#files + 1] = arg[j] end
-		break
-	elseif a:sub(1, 1) == "-" and #a > 1 then
-		for c in a:sub(2):gmatch(".") do
-			if c == "c" then to_stdout = true
-			elseif c == "d" then decompress = true
-			elseif c == "f" then force = true
-			elseif c == "k" then keep = true
-			elseif c == "n" then no_name = true
-			elseif c == "t" then test_only = true; decompress = true
-			elseif c == "v" then verbose = true
-			elseif c:match("%d") then level = tonumber(c)
-			else
-				unistd.write(2, "usage: " .. prog .. " [-cdfkntv] [-1..-9] [file...]\n")
-				os.exit(2)
-			end
-		end
+local optind = 1
+for opt, _, oi in unistd.getopt(arg, "cdfkntv123456789") do
+	if opt == "c" then to_stdout = true
+	elseif opt == "d" then decompress = true
+	elseif opt == "f" then force = true
+	elseif opt == "k" then keep = true
+	elseif opt == "n" then no_name = true
+	elseif opt == "t" then test_only = true; decompress = true
+	elseif opt == "v" then verbose = true
+	elseif opt:match("%d") then level = tonumber(opt)
 	else
-		files[#files + 1] = a
+		unistd.write(2, "usage: " .. prog .. " [-cdfkntv] [-1..-9] [file...]\n")
+		os.exit(2)
 	end
-	i = i + 1
+	optind = oi
 end
+files = util.operands(arg, optind)
 
 local function write_file(path, data, mode, mtime)
 	local f, err = io.open(path, "wb")

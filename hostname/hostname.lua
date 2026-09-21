@@ -15,19 +15,13 @@ local util = require("luaposixcli.util")
 local from_file = nil
 local name = nil
 
-local i = 1
-while i <= #arg do
-	local a = arg[i]
-	if a == "-F" or a == "-f" then
-		i = i + 1
-		from_file = arg[i] or util.die("usage: hostname [-F file] [name]")
-	elseif a:sub(1, 1) == "-" and #a > 1 then
-		util.die("usage: hostname [-F file] [name]")
-	else
-		name = a
-	end
-	i = i + 1
+local optind = 1
+for opt, optarg, oi in unistd.getopt(arg, "F:f:") do
+	if opt == "F" or opt == "f" then from_file = optarg
+	else util.die("usage: hostname [-F file] [name]") end
+	optind = oi
 end
+name = util.operands(arg, optind)[1]
 
 if from_file then
 	local text = util.slurp(from_file)

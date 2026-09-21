@@ -12,30 +12,20 @@ local tcp = require("lunatix.tcp")
 local util = require("luaposixcli.util")
 
 local showhead, tofile, quiet = false, false, false
-local url, optind = nil, 1
 
-while optind <= #arg do
-	local a = arg[optind]
-	if a == "--" then
-		optind = optind + 1
-		break
-	elseif a:sub(1, 1) == "-" and #a > 1 then
-		for c in a:sub(2):gmatch(".") do
-			if c == "i" then showhead = true
-			elseif c == "O" then tofile = true
-			elseif c == "q" then quiet = true
-			else
-				unistd.write(2, "usage: fetch [-iOq] url\n")
-				os.exit(2)
-			end
-		end
+local optind = 1
+for opt, _, oi in unistd.getopt(arg, "iOq") do
+	if opt == "i" then showhead = true
+	elseif opt == "O" then tofile = true
+	elseif opt == "q" then quiet = true
 	else
-		break
+		unistd.write(2, "usage: fetch [-iOq] url\n")
+		os.exit(2)
 	end
-	optind = optind + 1
+	optind = oi
 end
 
-url = arg[optind]
+local url = util.operands(arg, optind)[1]
 if not url then
 	unistd.write(2, "usage: fetch [-iOq] url\n")
 	os.exit(2)

@@ -16,29 +16,22 @@ local term = require("luaposixcli.term")
 local util = require("luaposixcli.util")
 
 local interval, no_title, exit_on_change = 2, false, false
-local i = 1
-while i <= #arg do
-	local a = arg[i]
-	if a:sub(1, 2) == "-n" then
-		local value = a:sub(3)
-		if value == "" then
-			i = i + 1
-			value = arg[i]
-		end
-		interval = tonumber(value) or util.die("usage: watch [-n seconds] [-t] command...", 2)
-	elseif a == "-t" then no_title = true
-	elseif a == "-g" then exit_on_change = true
-	elseif a:sub(1, 1) == "-" and #a > 1 then
-		util.die("usage: watch [-n seconds] [-t] command...", 2)
-	else
-		break
-	end
-	i = i + 1
+
+local function usage()
+	util.die("usage: watch [-n seconds] [-tg] command...", 2)
 end
 
-local command = {}
-for j = i, #arg do command[#command + 1] = arg[j] end
-if #command == 0 then util.die("usage: watch [-n seconds] [-t] command...", 2) end
+local optind = 1
+for opt, optarg, oi in unistd.getopt(arg, "n:tg") do
+	if opt == "n" then interval = tonumber(optarg) or usage()
+	elseif opt == "t" then no_title = true
+	elseif opt == "g" then exit_on_change = true
+	else usage() end
+	optind = oi
+end
+
+local command = util.operands(arg, optind)
+if #command == 0 then usage() end
 local line = table.concat(command, " ")
 
 -- the terminal is where this is watched from, and the keyboard with it

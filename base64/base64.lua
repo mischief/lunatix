@@ -16,30 +16,15 @@ local function usage()
 	util.die("usage: base64 [-d] [-i] [-w cols] [file]", 2)
 end
 
-local i = 1
-while i <= #arg do
-	local a = arg[i]
-	if a == "--" then
-		for j = i + 1, #arg do files[#files + 1] = arg[j] end
-		break
-	elseif a:sub(1, 2) == "-w" then
-		local value = a:sub(3)
-		if value == "" then
-			i = i + 1
-			value = arg[i] or usage()
-		end
-		wrap = tonumber(value) or usage()
-	elseif a:sub(1, 1) == "-" and #a > 1 then
-		for c in a:sub(2):gmatch(".") do
-			if c == "d" then decode = true
-			elseif c == "i" then ignore_garbage = true
-			else usage() end
-		end
-	else
-		files[#files + 1] = a
-	end
-	i = i + 1
+local optind = 1
+for opt, optarg, oi in unistd.getopt(arg, "diw:") do
+	if opt == "d" then decode = true
+	elseif opt == "i" then ignore_garbage = true
+	elseif opt == "w" then wrap = tonumber(optarg) or usage()
+	else usage() end
+	optind = oi
 end
+files = util.operands(arg, optind)
 
 if #files > 1 then usage() end
 
