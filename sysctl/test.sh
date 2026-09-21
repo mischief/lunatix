@@ -19,6 +19,14 @@ $SYSCTL 2>/dev/null && exit 1
 if [ "$(id -u)" != "0" ]; then
 	$SYSCTL kernel.hostname=nope >/dev/null 2>&1 && exit 1
 fi
+# -p reads name=value out of a file. In a user namespace the one knob
+# that can be set without being root is the hostname.
+TMPF=$(mktemp)
+trap 'rm -f "$TMPF"' EXIT
+printf '# a comment\nno.such.knob = 1\n\n' > "$TMPF"
+$SYSCTL -p /no/such/file 2>&1 | grep -q "cannot read" || exit 1
+$SYSCTL -p "$TMPF" 2>&1 | grep -q "no.such.knob" || exit 1
+$SYSCTL -p "$TMPF" >/dev/null 2>&1 && exit 1
 # and what the system sysctl says for the same knob
 if command -v sysctl >/dev/null 2>&1; then
 	[ "$($SYSCTL kernel.ostype)" = "$(sysctl kernel.ostype)" ] || exit 1

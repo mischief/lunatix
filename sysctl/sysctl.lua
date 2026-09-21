@@ -12,28 +12,24 @@ local util = require("luaposixcli.util")
 local ROOT = "/proc/sys"
 
 local all, quiet, write_mode, names_only = false, false, false, false
-local operands = {}
+local from_file = nil
 
-local i = 1
-while i <= #arg do
-	local a = arg[i]
-	if a == "--" then
-		for j = i + 1, #arg do operands[#operands + 1] = arg[j] end
-		break
-	elseif a:sub(1, 1) == "-" and #a > 1 then
-		for c in a:sub(2):gmatch(".") do
-			if c == "a" or c == "A" then all = true
-			elseif c == "w" then write_mode = true
-			elseif c == "q" then quiet = true
-			elseif c == "N" then names_only = true
-			elseif c == "e" then -- ignore what is not there, which is the default here
-			else util.die("usage: sysctl [-aqwN] [name[=value]...]", 2) end
-		end
-	else
-		operands[#operands + 1] = a
-	end
-	i = i + 1
+local function usage()
+	util.die("usage: sysctl [-aqwN] [-p file] [name[=value]...]", 2)
 end
+
+local optind = 1
+for opt, optarg, oi in unistd.getopt(arg, "aAwqNep:") do
+	if opt == "a" or opt == "A" then all = true
+	elseif opt == "w" then write_mode = true
+	elseif opt == "q" then quiet = true
+	elseif opt == "N" then names_only = true
+	elseif opt == "p" then from_file = optarg
+	elseif opt == "e" then -- ignore what is not there, which is the default here
+	else usage() end
+	optind = oi
+end
+local operands = util.operands(arg, optind)
 
 local function path_of(name)
 	return ROOT .. "/" .. name:gsub("%.", "/")
@@ -85,9 +81,22 @@ if all then
 	os.exit(0)
 end
 
-if #operands == 0 then
-	util.die("usage: sysctl [-aqwN] [name[=value]...]", 2)
+-- -p sets what a file says to set, one name=value per line, which is
+-- how the knobs get set at boot
+if from_file then
+	local text = util.slurp(from_file)
+	if not text then util.die(from_file .. ": cannot read") end
+	for line in util.lines(text) do
+		line = line:gsub("[#;].*$", ""):gsub("%s+$", "")
+		local name, value = line:match("^%s*([^=%s]+)%s*=%s*(.*)$")
+		if name then
+			operands[#operands + 1] = name .. "=" .. value
+		end
+	end
+	write_mode = true
 end
+
+if #operands == 0 then usage() end
 
 for _, operand in ipairs(operands) do
 	local name, value = operand:match("^([^=]+)=(.*)$")
