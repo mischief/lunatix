@@ -22,6 +22,6 @@ install_data(
   install_dir: lua_mod_dir / 'lunatix',
 )
 
-foreach p : ['ping', 'top', 'sz', 'rz', 'fetch', 'gzip']
+foreach p : ['ping', 'top', 'sz', 'rz', 'fetch', 'gzip', 'mount', 'umount', 'reboot', 'dmesg']
   subdir(p)
 endforeach
