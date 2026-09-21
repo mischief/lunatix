@@ -4,24 +4,16 @@
 local unistd = require("posix.unistd")
 local pwd = require("posix.pwd")
 local termio = require("posix.termio")
+local sys = require("luaposixcli.sys")
 
 local M = {}
 
 -- The hash lives in /etc/shadow where there is one, and in the passwd
--- entry where there is not. luaposix has no shadow binding, so the file
--- is read here; it is three fields deep and only the second matters.
+-- entry where there is not. POSIX says nothing about shadow passwords,
+-- so the call for it is in luaposixcli.sys rather than luaposix.
 local function shadow_hash(name)
-	local f = io.open("/etc/shadow", "r")
-	if not f then return nil end
-	for line in f:lines() do
-		local user, hash = line:match("^([^:]*):([^:]*)")
-		if user == name then
-			f:close()
-			return hash
-		end
-	end
-	f:close()
-	return nil
+	local entry = sys.getspnam(name)
+	return entry and entry.sp_pwdp
 end
 
 -- An account, or nil and why not
@@ -72,10 +64,16 @@ function M.askpass(prompt)
 	return answer
 end
 
--- Become the account: group first, because after setuid there is no
--- privilege left to change it with.
+-- Become the account. The order is the whole of it: the supplementary
+-- groups and the group id have to be set before the user id, because
+-- after setuid there is no privilege left to set them with, and skipping
+-- them leaves the new user in the groups the old one had.
 function M.become(entry)
-	local ok, err = unistd.setpid("g", entry.pw_gid)
+	local ok, err = sys.initgroups(entry.pw_name, entry.pw_gid)
+	if not ok and unistd.getuid() == 0 then
+		return nil, err or "cannot set the supplementary groups"
+	end
+	ok, err = unistd.setpid("g", entry.pw_gid)
 	if not ok or ok == -1 then return nil, err or "cannot set the group" end
 	ok, err = unistd.setpid("u", entry.pw_uid)
 	if not ok or ok == -1 then return nil, err or "cannot set the user" end
