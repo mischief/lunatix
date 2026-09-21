@@ -52,6 +52,22 @@ $F -A -n -o TARGET | grep -q '^| `-/mnt/early/under$' || exit 1
 [ -z "$($F -t nosuchfs)" ] || exit 1
 $F -t nosuchfs && exit 1
 
+# An initramfs records / as its own parent, and a mount can name a
+# parent that is not in the table at all. Both are roots: a tree that
+# finds no top prints nothing, which is what an image on rootfs saw.
+cat > "$TMP/initramfs" <<'EOF'
+1 1 0:1 / / rw - rootfs rootfs rw
+2 1 0:20 / /proc rw - proc proc rw
+5 1 0:22 / /tmp rw - tmpfs tmpfs rw
+6 5 0:23 / /tmp/under rw - tmpfs tmpfs rw
+9 77 0:9 / /orphan rw - tmpfs tmpfs rw
+EOF
+I="$FINDMNT -F $TMP/initramfs"
+[ "$($I -n -o TARGET | wc -l)" = "5" ] || exit 1
+[ "$($I -n -o TARGET | sed -n 1p)" = "/" ] || exit 1
+[ "$($I -n -o TARGET | sed -n 4p)" = "  └─/tmp/under" ] || exit 1
+[ "$($I -n -o TARGET | sed -n 5p)" = "/orphan" ] || exit 1
+
 # and what util-linux says about this machine's real mounts
 if command -v findmnt >/dev/null 2>&1 && [ -r /proc/self/mountinfo ]; then
 	[ "$($FINDMNT)" = "$(findmnt)" ] || exit 1

@@ -164,7 +164,13 @@ else
 	local shown = {}
 	for _, mount in ipairs(selected) do shown[mount.id] = mount end
 	for _, mount in ipairs(selected) do
-		local under = shown[mount.parent] and mount.parent or 0
+		-- an initramfs records / as its own parent, and a mount whose
+		-- parent is not shown has nothing here to sit under: both are
+		-- roots, and a mount made its own child is a tree with no top
+		local under = 0
+		if mount.parent ~= mount.id and shown[mount.parent] then
+			under = mount.parent
+		end
 		children[under] = children[under] or {}
 		table.insert(children[under], mount)
 	end
@@ -175,9 +181,11 @@ else
 	end
 
 	local glyph = ascii and GLYPHS.ascii or GLYPHS.utf8
+	local walked = {}
 	local function walk(id, indent)
 		local kids = children[id]
-		if not kids then return end
+		if not kids or walked[id] then return end
+		walked[id] = true
 		for n, mount in ipairs(kids) do
 			local last = (n == #kids)
 			if id == 0 then
