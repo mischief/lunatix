@@ -6,6 +6,7 @@ package.path = prefix .. "?.lua;" .. prefix .. "share/lua/5.4/?.lua;" .. package
 
 local unistd = require("posix.unistd")
 local sys = require("luaposixcli.sys")
+local probe = require("lunatix.probe")
 local util = require("luaposixcli.util")
 
 -- Names for the flags an -o option can set. Anything not here is passed
@@ -79,10 +80,16 @@ if all then
 			if fstype and kind ~= fstype then skip = true end
 			if not skip and not already_mounted(target) then
 				local flags, data = split_options(opts ~= "" and opts or nil)
-				local ok, err = sys.mount(source, target, kind, flags, data)
-				if not ok then
-					util.warn(target .. ": " .. tostring(err))
+				local device = probe.resolve(source)
+				if not device then
+					util.warn(source .. ": no such device")
 					status = 1
+				else
+					local ok, err = sys.mount(device, target, kind, flags, data)
+					if not ok then
+						util.warn(target .. ": " .. tostring(err))
+						status = 1
+					end
 				end
 			end
 		end
@@ -107,6 +114,8 @@ end
 if #operands ~= 2 then usage() end
 
 local source, target = operands[1], operands[2]
+-- UUID= and LABEL= name a device without saying where it is plugged in
+source = probe.resolve(source) or util.die(operands[1] .. ": no such device")
 local flags, data_text = split_options(options)
 local data = data_text and { data_text } or {}
 
