@@ -9,7 +9,10 @@ FETCH="lua5.4 $D/fetch.lua"
 TMP=$(mktemp -d)
 SERVER=
 cleanup() {
-	[ -n "$SERVER" ] && kill "$SERVER" 2>/dev/null
+	if [ -n "$SERVER" ]; then
+		kill "$SERVER" 2>/dev/null
+		wait "$SERVER" 2>/dev/null
+	fi
 	rm -rf "$TMP"
 }
 trap cleanup EXIT
@@ -20,7 +23,10 @@ dd if=/dev/urandom of="$TMP/www/blob.bin" bs=1000 count=50 2>/dev/null
 
 # port 0 lets the kernel pick, which is what keeps two runs of this test
 # from landing on the same one; the server says which it got
-(cd "$TMP/www" && python3 -u -m http.server 0 --bind 127.0.0.1 > "$TMP/log" 2>&1) &
+# exec, or $! is the subshell and not the server: a subshell holding
+# more than one command is not replaced by what it runs, so killing $!
+# leaves the server behind for init to adopt
+(cd "$TMP/www" && exec python3 -u -m http.server 0 --bind 127.0.0.1 > "$TMP/log" 2>&1) &
 SERVER=$!
 PORT=
 n=0
