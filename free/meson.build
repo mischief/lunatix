@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: ISC
+install_data('free.lua',
+  rename: 'free',
+  install_dir: get_option('bindir'),
+  install_mode: 'rwxr-xr-x',
+)
+
+test('free', sh, args: [meson.current_source_dir() / 'test.sh'])
