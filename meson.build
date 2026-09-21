@@ -22,6 +22,13 @@ install_data(
   install_dir: lua_mod_dir / 'lunatix',
 )
 
-foreach p : ['ping', 'top', 'sz', 'rz', 'fetch', 'gzip', 'mount', 'umount', 'reboot', 'dmesg']
+install_data(
+  'lunatix/crypto/hashstate.lua', 'lunatix/crypto/sha1.lua',
+  'lunatix/crypto/sha256.lua', 'lunatix/crypto/sha512.lua',
+  install_dir: lua_mod_dir / 'lunatix' / 'crypto',
+)
+
+foreach p : ['ping', 'top', 'sz', 'rz', 'fetch', 'gzip', 'mount', 'umount', 'reboot', 'dmesg',
+    'sum', 'sync', 'killall']
   subdir(p)
 endforeach
