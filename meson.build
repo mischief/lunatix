@@ -37,6 +37,6 @@ foreach p : ['ping', 'top', 'sz', 'rz', 'fetch', 'gzip', 'mount', 'umount', 'reb
     'switch_root', 'mountpoint', 'losetup', 'swap',
     'whoami', 'which', 'rev', 'nproc', 'uptime', 'free', 'stat',
     'base64', 'hexdump',
-    'watch', 'sysctl', 'mknod', 'fuser', 'pidof', 'setsid', 'unshare']
+    'watch', 'sysctl', 'mknod', 'fuser', 'hwclock', 'pidof', 'setsid', 'unshare']
   subdir(p)
 endforeach
