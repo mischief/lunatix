@@ -18,7 +18,8 @@ lua_prog = find_program(lua_name)
 sh = find_program('sh')
 
 install_data(
-  'lunatix/http.lua', 'lunatix/tcp.lua', 'lunatix/zmodem.lua',
+  'lunatix/auth.lua', 'lunatix/http.lua', 'lunatix/tcp.lua',
+  'lunatix/zmodem.lua',
   install_dir: lua_mod_dir / 'lunatix',
 )
 
@@ -29,6 +30,7 @@ install_data(
 )
 
 foreach p : ['ping', 'top', 'sz', 'rz', 'fetch', 'gzip', 'mount', 'umount', 'reboot', 'dmesg',
-    'sum', 'sync', 'killall']
+    'sum', 'sync', 'killall',
+    'login', 'su', 'getty']
   subdir(p)
 endforeach
